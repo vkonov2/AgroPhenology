@@ -1,0 +1,5 @@
+observation_id,latitude,longitude,observation_date,pest_name,observed_stage,accumulation_start_date,crop_name,region,source
+SYNTH-001,55.7558,37.6173,2023-06-20,яблонная плодожорка,массовое отрождение гусениц,2023-04-15,яблоня,Демонстрационный регион,synthetic_demo_not_real_monitoring
+SYNTH-002,51.6608,39.2003,2023-06-18,яблонная плодожорка,массовый выход гусениц,,яблоня,Демонстрационный регион,synthetic_demo_not_real_monitoring
+SYNTH-003,45.0355,38.9753,2023-05-25,яблонная плодожорка,имаго,2023-04-01,яблоня,Демонстрационный регион,synthetic_demo_not_real_monitoring
+SYNTH-004,95.0000,37.0000,not-a-date,яблонная плодожорка,отрождение гусениц,2023-04-01,яблоня,Демонстрационный регион,synthetic_demo_not_real_monitoring
