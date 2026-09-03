@@ -53,14 +53,14 @@ def test_hutton_missing_hours_are_indeterminate_when_they_can_change_result() ->
     assert result["day_status"] == "indeterminate"
 
 
-def test_hutton_period_is_fail_dominant_for_logical_and() -> None:
+def test_hutton_period_preserves_indeterminate_input() -> None:
     daily = pd.DataFrame(
         {
             "date": [pd.Timestamp("2026-07-01").date(), pd.Timestamp("2026-07-02").date()],
             "day_status": ["fail", "indeterminate"],
         }
     )
-    assert classify_hutton_periods(daily).iloc[0]["period_status"] == "fail"
+    assert classify_hutton_periods(daily).iloc[0]["period_status"] == "indeterminate"
 
 
 def test_overlapping_hutton_pairs_are_merged_into_one_episode() -> None:

@@ -21,7 +21,8 @@ class HuttonConfig:
     minimum_physical_temperature_c: float = -60.0
     maximum_physical_temperature_c: float = 60.0
     and_indeterminate_resolution: str = "fail_dominates_indeterminate"
-    model_version: str = "1.0.0"
+    period_indeterminate_resolution: str = "indeterminate_dominates_fail"
+    model_version: str = "1.0.1"
 
 
 @dataclass(frozen=True)
@@ -192,8 +193,8 @@ def classify_hutton_periods(
 ) -> pd.DataFrame:
     """Classify every pair of consecutive local dates and retain indeterminate pairs."""
 
-    if config.and_indeterminate_resolution != "fail_dominates_indeterminate":
-        raise ValueError("Unsupported Hutton AND/indeterminate resolution rule")
+    if config.period_indeterminate_resolution != "indeterminate_dominates_fail":
+        raise ValueError("Unsupported Hutton period/indeterminate resolution rule")
     if daily.empty:
         return pd.DataFrame()
     ordered = daily.sort_values("date").reset_index(drop=True)
@@ -206,10 +207,10 @@ def classify_hutton_periods(
         statuses = {previous["day_status"], current["day_status"]}
         if statuses == {"pass"}:
             period_status = "pass"
-        elif "fail" in statuses:
-            period_status = "fail"
-        else:
+        elif "indeterminate" in statuses:
             period_status = "indeterminate"
+        else:
+            period_status = "fail"
         rows.append(
             {
                 "period_start": previous["date"],
