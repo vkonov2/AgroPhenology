@@ -1,0 +1,173 @@
+{
+  "contract_version": "2.0.0",
+  "frozen_parent_cycle": {
+    "run_id": "20260910_first_cycle_v3",
+    "path": "results/late_blight_early_warning/20260910_first_cycle_v3",
+    "execution_manifest_sha256": "c7976317e6d94b8d1ca55b0bd618226c769914280bd7896ca36b5e0ca2cf3c80",
+    "immutability": "verify every manifest output hash before and after cycle2; never write into the parent run"
+  },
+  "research_target": "first_recorded_potato_late_blight_in_field_season",
+  "scientific_scope": "retrospective_registration_proxy_not_biological_onset",
+  "parent_target_and_labels": {
+    "preserve_cycle1_target": true,
+    "class_mapping": {
+      "no_record_in_horizon": 0,
+      "imminent": 1,
+      "actionable": 2
+    },
+    "class_order": [0, 1, 2],
+    "actionable_window_days": [3, 10],
+    "imminent_window_days": [0, 2],
+    "weather_cutoff_days_before_issue": 2,
+    "entry_and_censoring": "unchanged_from_cycle1_contract_1.0.2"
+  },
+  "outer_folds": "exactly_cycle1_rolling_origin_folds",
+  "nested_temporal_oof": {
+    "unit": "calendar_year",
+    "scheme": "expanding_past_only",
+    "first_forecast_year": 2012,
+    "minimum_history_rule": "skip forecast years until the earlier fit rows contain all three classes",
+    "baseline_training_rows": "cycle1_model_rows_in_strictly_earlier_years",
+    "correction_training_rows": "pooled_inner_oof_rows_within_outer_train_only",
+    "validation_use": "select_alpha_and_policy_only; never fit correction or calibration",
+    "test_use": "evaluation_only; never select alpha threshold policy or features",
+    "post_selection_refit": false,
+    "required_provenance": [
+      "outer_fold_id",
+      "inner_forecast_year",
+      "baseline_fit_year_start",
+      "baseline_fit_year_end",
+      "baseline_fit_end",
+      "max_label_available_at",
+      "train_rows",
+      "forecast_rows",
+      "train_field_seasons",
+      "forecast_field_seasons",
+      "train_warnable_events",
+      "forecast_warnable_events"
+    ]
+  },
+  "c6": {
+    "baseline_model_id": "C0",
+    "baseline_model": "cycle1 multinomial logistic calendar model with median imputer indicators, scaler and C=0.1",
+    "formula": "softmax(raw_logits_C0 + alpha * raw_logits_weather_correction)",
+    "correction_features": "EPISODE_FEATURES_only",
+    "catboost": {
+      "loss_function": "MultiClass",
+      "iterations": 200,
+      "depth": 2,
+      "learning_rate": 0.03,
+      "l2_leaf_reg": 30.0,
+      "random_seed": 20260910,
+      "thread_count": 2,
+      "allow_writing_files": false
+    },
+    "alpha_grid": [0.0, 0.1, 0.25, 0.5, 1.0],
+    "baseline_semantics": "CatBoost Pool baseline receives raw C0 formula values exactly once; inference predicts correction without baseline and composes explicitly",
+    "alpha_zero": "return C0 probabilities exactly and reuse the unchanged C0 policy without threshold reselection in the identity check",
+    "missing_weather": "set correction to zero before composition and use exact C0 logits and probabilities; keep one continuous notification state"
+  },
+  "negative_controls": {
+    "calibration_only": {
+      "id": "C6_calibration_control",
+      "definition": "regularized multinomial calibration correction over OOF C0 raw logits",
+      "regularization_C": 0.1,
+      "identity_candidate": "alpha=0"
+    },
+    "calendar_only_catboost": {
+      "id": "C6_calendar_control",
+      "features": "CALENDAR_FEATURES_only",
+      "catboost_configuration": "same_as_C6_weather",
+      "identity_candidate": "alpha=0"
+    },
+    "periodic": {
+      "existing_id": "periodic_30d",
+      "existing_dates": "June_1_July_1_August_1",
+      "diagnostic_k17": "report_all_17_fixed_phases; never choose the best external phase"
+    }
+  },
+  "evaluation": {
+    "primary_period": [2020, 2025],
+    "incomplete_2026": "separate_only",
+    "scopes": {
+      "paired_candidate_days_v3": "retain the exact cycle1 candidate_comparison_complete scenario and its full uncompressed calendar state",
+      "service_calendar_with_C0_fallback": "score every service-active day with one state machine; use C0 where episode weather is unavailable"
+    },
+    "comparators": ["calendar_window", "C0", "C1", "C4", "C5"],
+    "primary_metrics": [
+      "timely_hits",
+      "events_with_warning_opportunity",
+      "timely_recall",
+      "messages_per_30_field_days",
+      "active_alarm_fraction",
+      "computable_event_fraction",
+      "computable_fraction",
+      "fallback_day_fraction"
+    ],
+    "policy_modes": {
+      "c0_policy_replay": "reuse exact cycle1 C0 threshold active_days and cooldown per outer fold and scope",
+      "validation_selected": "jointly choose alpha and a threshold using outer validation only"
+    },
+    "selection_constraints": {
+      "messages_per_30_field_days_max": 2.0,
+      "active_alarm_fraction_max": 0.5,
+      "active_days_per_message": 7,
+      "cooldown_days": 15,
+      "threshold_candidates": "cycle1 fixed grid 0.05..0.95 plus 1.000001 and validation score quantiles",
+      "tie_break": [
+        "highest_validation_timely_recall",
+        "lowest_messages_per_30_field_days",
+        "lowest_active_alarm_fraction",
+        "fewest_suppressed_repeats",
+        "smallest_alpha",
+        "highest_threshold"
+      ],
+      "if_no_feasible_candidate": "minimum_total_constraint_violation_then_the_same_tie_break"
+    },
+    "uncertainty": {
+      "paired_year_bootstrap_repeats": 2000,
+      "seed": 20260910,
+      "leave_one_test_year_out": true,
+      "interpretation": "descriptive across few observed years; does not include full model-selection or disease-registration uncertainty"
+    }
+  },
+  "diagnostics": {
+    "fixed_policy_pairs": [
+      ["calendar_window", "C4"],
+      ["calendar_window", "C5"],
+      ["C1", "C4"],
+      ["C0", "C4"]
+    ],
+    "intersection_categories": ["both_hit", "baseline_only_hit", "candidate_only_hit", "neither_hit"],
+    "oracle_union_label": "post_hoc_diagnostic_not_achievable_model_or_information_ceiling",
+    "miss_reason_labels": [
+      "no_actionable_decision_date",
+      "weather_unavailable_in_actionable_window",
+      "score_never_crossed_threshold",
+      "crossing_suppressed_by_cooldown_or_active_alarm",
+      "messages_only_too_early",
+      "messages_only_too_late"
+    ],
+    "funnel": "yearly all first events to after entry to warnable to primary registration period to common weather to hit, plus field-seasons days and explicit loss reasons",
+    "polyakov": "report service coverage and conditional/scorable performance separately; distinguish weather from BBCH availability",
+    "c4_optuna": "describe saved trials and fixed-versus-tuned outcomes only; no external reselection"
+  },
+  "privacy": {
+    "row_level_artifacts": "local_only",
+    "event_key": "sha256_pseudonym_with_cycle2_salt",
+    "aggregate_report_excludes": ["field_uid", "field_season", "coordinates"]
+  },
+  "prohibited": [
+    "change endpoint label window splits censoring cutoff or budgets for results",
+    "Optuna search for C6",
+    "CatBoostRanker",
+    "future weather phenology visits or labels",
+    "notification state reset at weather gaps or evaluation masks",
+    "write into frozen v3",
+    "publish field data",
+    "send real notifications",
+    "commit or push"
+  ],
+  "output_root": "results/late_blight_early_warning",
+  "random_seed": 20260910
+}

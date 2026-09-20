@@ -1,0 +1,133 @@
+{
+  "contract_version": "1.0.1",
+  "frozen_before_external_scoring": true,
+  "experiment_id": "gfs_archive_forecast_increment",
+  "parent_run": "results/late_blight_early_warning/20260910_first_cycle_v3",
+  "research_question": "whether archived operational GFS forecast fields add early-warning value beyond calendar and past-only weather",
+  "research_target": "first_recorded_potato_late_blight_in_field_season",
+  "scientific_scope": "retrospective_registration_proxy_not_biological_onset",
+  "external_years_are_previously_studied": true,
+  "timezone": "Europe/Riga",
+  "daily_issue_time": "08:00:00",
+  "source_dataset": {
+    "id": "d084001",
+    "name": "NCEP GFS 0.25 Degree Global Forecast Grids",
+    "doi": "10.5065/D65D8PWK",
+    "gdex_url": "https://gdex.ucar.edu/datasets/d084001/",
+    "thredds_catalog": "https://tds.gdex.ucar.edu/thredds/catalog/catalog_d084001.xml",
+    "access_method": "unauthenticated_THREDDS_NCSS_regional_subset",
+    "archive_start": "2015-01-15",
+    "spatial_grid_degrees": 0.25,
+    "field_to_public_grid_join": "local_private_only"
+  },
+  "forecast_availability": {
+    "selection_rule_id": "latest_cycle_assumed_published_before_issue_v1",
+    "cycle_hours_utc": [0, 6, 12, 18],
+    "historical_publication_log_available": false,
+    "publication_time_status": "assumption_not_observed_historical_timestamp",
+    "main_assumed_hours_after_initialization": 4,
+    "delay_sensitivity_total_hours_after_initialization": 7,
+    "rule": "select the latest cycle for which initialization plus assumed publication lag is not later than issued_at",
+    "no_backdating": true,
+    "no_reanalysis_fill": true
+  },
+  "forecast_sampling": {
+    "native_archive_steps_hours_through_168": 3,
+    "selected_step_hours": 6,
+    "interpretation": "six-hour synoptic samples and six-hour precipitation intervals; not exact hourly durations and not Hutton hours",
+    "bands": [
+      {"id": "d1_3", "lead_hours_after_decision_open": 0, "lead_hours_after_decision_closed": 72},
+      {"id": "d4_7", "lead_hours_after_decision_open": 72, "lead_hours_after_decision_closed": 168}
+    ],
+    "precipitation_interval_assignment": "six-hour accumulation is assigned by its interval end valid time",
+    "complete_case_rule": "all expected six-hour slots and all required variables in both bands",
+    "spatial_join": "nearest 0.25-degree GFS grid cell"
+  },
+  "forecast_features": [
+    "fcst_t_mean_d1_3",
+    "fcst_t_min_d1_3",
+    "fcst_t_max_d1_3",
+    "fcst_rh_mean_d1_3",
+    "fcst_rh_max_d1_3",
+    "fcst_precip_sum_d1_3",
+    "fcst_t_mean_d4_7",
+    "fcst_t_min_d4_7",
+    "fcst_t_max_d4_7",
+    "fcst_rh_mean_d4_7",
+    "fcst_rh_max_d4_7",
+    "fcst_precip_sum_d4_7"
+  ],
+  "past_weather": {
+    "source": "existing_NASA_POWER_daily_features_from_parent_run",
+    "features": "NASA_COMMON_FEATURES",
+    "cutoff_days_before_issue": 2,
+    "status": "retrospective_past_only_availability_assumption_not_historical_publication_log",
+    "same_features_for_B_and_C": true
+  },
+  "timeliness_window_days": {"minimum": 3, "maximum": 10},
+  "outcome_and_decision_semantics": "unchanged_from_parent_evaluation_contract",
+  "notification_policy": {
+    "family": "existing_P0_only",
+    "active_days_per_message": 7,
+    "cooldown_days": 15,
+    "threshold_selection": "validation_only_fixed_grid_and_score_quantiles",
+    "research_budget": {
+      "messages_per_30_field_days_max": 2.0,
+      "active_alarm_fraction_max": 0.5
+    },
+    "external_budget_exceedance_action": "report_without_retuning",
+    "equal_allowed_budget_is_not_equal_realized_load": true
+  },
+  "rolling_origin_folds": [
+    {"id": "test_2020", "train_years": [2015, 2017], "validation_years": [2018, 2019], "test_years": [2020, 2020]},
+    {"id": "test_2021", "train_years": [2015, 2018], "validation_years": [2019, 2020], "test_years": [2021, 2021]},
+    {"id": "test_2022", "train_years": [2015, 2019], "validation_years": [2020, 2021], "test_years": [2022, 2022]},
+    {"id": "test_2023", "train_years": [2015, 2020], "validation_years": [2021, 2022], "test_years": [2023, 2023]},
+    {"id": "test_2024", "train_years": [2015, 2021], "validation_years": [2022, 2023], "test_years": [2024, 2024]},
+    {"id": "test_2025", "train_years": [2015, 2022], "validation_years": [2023, 2024], "test_years": [2025, 2025]}
+  ],
+  "model_matrix": {
+    "A": "empirical_calendar_window_recomputed_from_GFS_complete_training_events",
+    "A_matched_C0": "multinomial_logistic_calendar_fit_on_same_ABC_complete_training_rows",
+    "A_strong": "calendar_only_control_fit_on_all_allowed_past_rows_from_2010",
+    "B": "fixed_shallow_catboost_calendar_plus_existing_past_weather",
+    "C": "fixed_shallow_catboost_calendar_plus_same_past_weather_plus_archived_GFS_forecast"
+  },
+  "primary_comparison": ["A", "B", "C"],
+  "catboost_fixed": {
+    "iterations": 220,
+    "depth": 3,
+    "learning_rate": 0.05,
+    "l2_leaf_reg": 8.0,
+    "loss_function": "MultiClass",
+    "random_seed": 20260910
+  },
+  "optuna": {"enabled": false},
+  "analysis_population": {
+    "primary_mask": "abc_complete = service_active and nasa_common_complete and gfs_forecast_complete for the chosen availability scenario",
+    "same_scores_mask_for_A_B_C": true,
+    "missing_forecast_action": "all primary A_B_C abstain for that day",
+    "sequential_replay_calendar": "full_original_daily_calendar_without_compressing_missing_days_or_cooldown",
+    "event_denominator": "all unchanged warnable first events in each external year",
+    "common_mask_and_full_service_reported_separately": true
+  },
+  "calendar_controls": {
+    "A_window": "estimated inside each training fold after GFS completeness is known",
+    "A_strong": "trained using all allowed past calendar rows including pre-GFS years, evaluated separately on the common mask and full service",
+    "no_external_year_selection": true
+  },
+  "uncertainty": {
+    "event_wilson_interval": true,
+    "paired_year_bootstrap_seed": 20260910,
+    "leave_one_year_out": true,
+    "year_level_results": true
+  },
+  "inputs": {
+    "parent_daily_decisions": "results/late_blight_early_warning/20260910_first_cycle_v3/daily_decisions.parquet",
+    "parent_field_seasons": "results/late_blight_early_warning/20260910_first_cycle_v3/field_seasons.parquet",
+    "parent_events": "results/late_blight_early_warning/20260910_first_cycle_v3/events.parquet",
+    "parent_manifest": "results/late_blight_early_warning/20260910_first_cycle_v3/execution_manifest.json"
+  },
+  "output_root": "results/late_blight_early_warning",
+  "random_seed": 20260910
+}

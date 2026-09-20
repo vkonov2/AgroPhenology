@@ -1,0 +1,142 @@
+{
+  "contract_version": "1.0.0",
+  "frozen_at_stage": "shadow_readiness_after_20260910_third_cycle_v2",
+  "research_target": "first_recorded_potato_late_blight_in_field_season",
+  "mode": "prospective_shadow_no_delivery",
+  "parents": {
+    "cycle1": {
+      "run_id": "20260910_first_cycle_v3",
+      "execution_manifest_sha256": "c7976317e6d94b8d1ca55b0bd618226c769914280bd7896ca36b5e0ca2cf3c80"
+    },
+    "cycle2": {
+      "run_id": "20260910_second_cycle_v4",
+      "execution_manifest_sha256": "1355bc9742f397a893774ed02edd7b4080364714d49f208ed75b190d8fd856c0"
+    },
+    "cycle3": {
+      "run_id": "20260910_third_cycle_v2",
+      "execution_manifest_sha256": "38f56c053d07fd390ced397bfd9e3566ba441581dc4feb4c8029fdad2920a833"
+    },
+    "immutability": "verify all recorded output hashes before and after readiness; never write into parent runs"
+  },
+  "model_freeze": {
+    "new_training": false,
+    "new_features": false,
+    "new_alpha_or_threshold_selection": false,
+    "new_optuna_ranker_or_grid": false,
+    "bundle_selection_rule": "latest chronological compatible saved outer fold completed before shadow lock, using its validation-selected configuration and no external test ranking",
+    "selected_fold": "test_2026_partial",
+    "train_years": [2010, 2023],
+    "validation_years": [2024, 2025],
+    "external_2026_used_for_selection": false,
+    "primary_participants": [
+      "calendar_window:P0_saved",
+      "C0:P0_saved",
+      "C0:P_growth_selected",
+      "C6_weather:P0_saved",
+      "C6_weather:P_growth_selected",
+      "C6_calibration_control:P_growth_selected"
+    ],
+    "diagnostic_participants": ["C1", "C4", "C5"]
+  },
+  "endpoint": {
+    "class_mapping": {
+      "no_record_in_horizon": 0,
+      "imminent": 1,
+      "actionable": 2
+    },
+    "score": "probability_of_actionable_class_2",
+    "warning_window_calendar_days": [3, 10],
+    "weather_cutoff_calendar_days_before_issue": 2,
+    "decision_timezone": "Europe/Riga",
+    "scheduled_local_time": "08:00:00",
+    "absence_of_visit_or_record_is_negative": false,
+    "repeat_positive_is_new_event": false
+  },
+  "frozen_weather_source": {
+    "provider": "Open-Meteo Historical Weather API",
+    "product": "ERA5",
+    "endpoint": "https://archive-api.open-meteo.com/v1/archive",
+    "models_parameter": "era5",
+    "native_grid": "0.25 degree",
+    "cell_selection": "nearest",
+    "elevation_parameter": "nan",
+    "statistical_downscaling": false,
+    "response_timezone": "UTC",
+    "local_day_timezone": "Europe/Riga",
+    "required_variables": [
+      "temperature_2m",
+      "relative_humidity_2m",
+      "precipitation",
+      "soil_temperature_0_to_7cm",
+      "soil_moisture_0_to_7cm",
+      "shortwave_radiation",
+      "wind_speed_10m"
+    ],
+    "scoring_variables": [
+      "temperature_2m",
+      "relative_humidity_2m",
+      "precipitation"
+    ],
+    "minimum_episode_history_local_days": 23,
+    "no_automatic_source_substitution": true,
+    "incompatible_source_status": "requires_separate_source_bridge_study"
+  },
+  "availability_behavior": {
+    "C4_C5_missing_or_late_weather": "abstain",
+    "C6_missing_or_late_weather": "exact_C0_fallback",
+    "C6_policy_state": "one history across weather and fallback",
+    "source_transition": "break score reference comparability without resetting cooldown alarm or burden",
+    "late_data": "append a new source or observation version and never revise an old decision",
+    "future_forecasts": "archive_only and excluded from frozen past-only features"
+  },
+  "execution": {
+    "default": "offline_dry_run",
+    "actual_active_field_registry_required": true,
+    "historical_coordinates_may_become_active_fields": false,
+    "backdated_prospective_decisions_allowed": false,
+    "one_decision_per_registry_policy_field_season_slot": true,
+    "delivery_mode": "shadow",
+    "actually_sent": false,
+    "notification_channels": [],
+    "schedule_installed_by_readiness": false
+  },
+  "storage": {
+    "raw_source_bytes": "content_addressed_append_only_local_archive",
+    "retrieval_log": "separate_immutable_versions",
+    "observation_log": "separate_append_only_versions",
+    "decision_log": "immutable_rows_plus_atomic_policy_state",
+    "external_cryptographic_timestamp_anchor": false,
+    "trust_boundary": "local SQLite permissions and integrity checks; hashes alone do not prove wall-clock creation"
+  },
+  "future_evaluation": {
+    "analysis_point": "must_be_predeclared_before_inspecting_mature_new_outcomes",
+    "dynamic_population": true,
+    "historical_denominator_87_reused": false,
+    "event": "first available target-specific positive after actual enrollment",
+    "timely_hit": "virtual message 3 to 10 calendar days before first registration",
+    "full_horizon_observability_required_for_negative_class": true,
+    "unknown_and_censoring_retained": true,
+    "report": [
+      "mature eligible events and timely hits",
+      "virtual messages per 30 field-days",
+      "active alarm-day fraction",
+      "computed and abstained expected decisions by reason",
+      "weather versus effective C0 fractions",
+      "missed slots and decision delay",
+      "independent visit adherence and result latency",
+      "treatment and post-message action completeness"
+    ],
+    "repeated_winner_selection_on_accumulating_outcomes": false,
+    "biological_effect_claim_from_shadow_scores": false
+  },
+  "prohibited": [
+    "send_real_notifications",
+    "install_or_activate_a_schedule",
+    "publish_raw_field_or_location_data",
+    "use_future_weather_phenology_visit_or_outcome_in_decision",
+    "backdate_a_late_run",
+    "replace_ERA5_with_IFS_Best_Match_or_forecast_products",
+    "change_warning_window_cutoff_policy_or_budget",
+    "overwrite_parent_results_commit_or_push"
+  ]
+}

@@ -1,0 +1,121 @@
+{
+  "contract_version": "1.0.2",
+  "research_target": "first_recorded_potato_late_blight_in_field_season",
+  "scientific_scope": "retrospective_registration_proxy_not_biological_onset",
+  "timezone": "Europe/Riga",
+  "daily_issue_time": "08:00:00",
+  "source_timestamp_precision": "calendar_date_only",
+  "visit_availability_assumption": "available_at_next_local_day_08_00",
+  "global_snapshot_date": "2026-08-31",
+  "weather_availability": {
+    "nasa": {
+      "cutoff_days_before_issue": 2,
+      "status": "retrospective_past_only_assumption_not_historical_publication_log",
+      "day_grid": "UTC"
+    },
+    "era5": {
+      "cutoff_days_before_issue": 2,
+      "status": "retrospective_past_only_assumption_not_historical_publication_log",
+      "day_grid": "Europe/Riga local day"
+    }
+  },
+  "first_cycle_feature_cutoff_days_before_issue": 2,
+  "feature_cutoff_rationale": "one conservative cutoff for NASA, ERA common aggregates, Hutton, Smith, Polyakov and episode ablations; actual historical publication timestamps are unavailable",
+  "timeliness_window_days": {"minimum": 3, "maximum": 10},
+  "daily_target": {
+    "imminent": [0, 2],
+    "actionable": [3, 10],
+    "no_record_in_horizon": "no first registry record through issue_date_plus_10 within observed registry follow-up",
+    "unknown": "mask_not_a_negative_class"
+  },
+  "entry": "day_after_first_eligible_registry_visit",
+  "decision_calendar": "daily_from_entry_through_September_30_or_global_snapshot_boundary_independent_of_future_visit",
+  "service_stop": "first_positive_record_available_to_the_service",
+  "negative_outcome_boundary": "last_registry_visit_is_used_only_by_the_evaluator",
+  "main_population": "conservative_v2_A_plus_B_potato",
+  "sensitivity_populations": ["direct_A_only", "prior_visit_gap_at_most_14_days", "prior_visit_gap_at_most_21_days"],
+  "registration_delay_sensitivity_days": [0, 3, 7],
+  "registration_delay_interpretation": "hypothetical days by which symptoms precede registry record; not an estimate of incubation or actual onset",
+  "notification_policy": {
+    "active_days_per_message": 7,
+    "cooldown_days": 15,
+    "threshold_selection": "validation_only_fixed_grid_and_score_quantiles",
+    "research_budget": {
+      "messages_per_30_field_days_max": 2.0,
+      "active_alarm_fraction_max": 0.5
+    },
+    "reported_budget_grid": {
+      "messages_per_30_field_days": [1.0, 2.0, 3.0],
+      "active_alarm_fraction": [0.25, 0.5, 0.75]
+    }
+  },
+  "rolling_origin_folds": [
+    {"id": "test_2020", "train_years": [2010, 2017], "validation_years": [2018, 2019], "test_years": [2020, 2020]},
+    {"id": "test_2021", "train_years": [2010, 2018], "validation_years": [2019, 2020], "test_years": [2021, 2021]},
+    {"id": "test_2022", "train_years": [2010, 2019], "validation_years": [2020, 2021], "test_years": [2022, 2022]},
+    {"id": "test_2023", "train_years": [2010, 2020], "validation_years": [2021, 2022], "test_years": [2023, 2023]},
+    {"id": "test_2024", "train_years": [2010, 2021], "validation_years": [2022, 2023], "test_years": [2024, 2024]},
+    {"id": "test_2025", "train_years": [2010, 2022], "validation_years": [2023, 2024], "test_years": [2025, 2025]},
+    {"id": "test_2026_partial", "train_years": [2010, 2023], "validation_years": [2024, 2025], "test_years": [2026, 2026], "incomplete": true}
+  ],
+  "model_matrix": {
+    "C0": "multinomial_logistic_calendar",
+    "C1": "catboost_calendar",
+    "C2": "catboost_calendar_plus_nasa_common_daily_aggregates",
+    "C3": "catboost_calendar_plus_era5_common_daily_aggregates",
+    "C4": "catboost_calendar_plus_reconstructable_era5_daily_episodes",
+    "C5": "multinomial_logistic_same_C4_features",
+    "Smith": "fixed_two_consecutive_days_Tmin_ge_10_and_RH90_hours_ge_11"
+  },
+  "model_training_population": "same_observable_candidate_comparison_complete_rows_for_C0_to_C5",
+  "model_fit_after_validation": "train_only_no_refit_to_preserve_the_score_scale_used_for_policy_selection",
+  "evaluation_scopes": {
+    "service_calendar": "all active field-days; unavailable model inputs produce abstention and remain in burden denominator",
+    "paired_candidate_days": "same candidate_comparison_complete field-days for C0-C5; used to separate algorithm signal from missing frozen ERA coverage"
+  },
+  "common_weather_comparison": {
+    "windows_days": [7, 14, 30],
+    "variables": ["tmean", "tmin", "tmax", "rhmean", "rain", "rain_days", "active_temperature_sum"],
+    "wind_excluded_reason": "NASA_WS2M_and_ERA5_10m_wind_are_not_the_same_measurement"
+  },
+  "catboost_fixed": {"iterations": 220, "depth": 3, "learning_rate": 0.05, "l2_leaf_reg": 8.0, "loss_function": "MultiClass"},
+  "optuna": {
+    "family": "C4_only",
+    "total_trials_full_run": 21,
+    "trials_per_fold": 3,
+    "smoke_trials_per_fold": 1,
+    "objective": "validation_timely_recall_under_fixed_message_and_alarm_budgets_with_predeclared_small_burden_tie_break",
+    "objective_utility": "timely_recall - 0.001*messages_per_30_field_days - 0.0001*active_alarm_fraction",
+    "best_configuration_seed_sensitivity_count": 3,
+    "seed": 20260910,
+    "search_space": {"depth": [2, 5], "iterations": [120, 360], "learning_rate": [0.02, 0.15], "l2_leaf_reg": [1.0, 30.0]}
+  },
+  "selection": {
+    "primary_table": ["timely_recall", "messages_per_30_field_days", "active_alarm_fraction", "computable_fraction"],
+    "interesting_effect": "plus_0_15_timely_recall_at_comparable_burden_or_minus_30_percent_messages_with_no_more_than_minus_0_05_recall_and_no_alarm_growth",
+    "strong_effect": {
+      "timely_recall_gain_min": 0.15,
+      "candidate_must_meet_external_research_budget": true,
+      "comparable_burden": {
+        "delta_messages_per_30_field_days_max": 0.0,
+        "delta_active_alarm_fraction_max": 0.0
+      },
+      "efficiency_branch": {
+        "relative_message_reduction_min": 0.30,
+        "timely_recall_loss_max": 0.05,
+        "delta_active_alarm_fraction_max": 0.0
+      }
+    },
+    "external_periods_are_not_untouched": true
+  },
+  "inputs": {
+    "conservative_v2_csv": "docs/extra/vaad_pipeline_repro_20260905/data/vaad_observations_geocoded_conservative_v2.csv",
+    "original_vaad_csv": "data/vaad_observations_geocoded_recovered.csv",
+    "frozen_external_dir": "docs/extra/vaad_pipeline_repro_20260905/frozen_external",
+    "snapshot_vaad_source": "docs/extra/vaad_pipeline_repro_20260905/project/src/agro_phenology/vaad_diseases.py",
+    "snapshot_late_blight_source": "docs/extra/vaad_pipeline_repro_20260905/project/src/agro_phenology/late_blight.py",
+    "sha256_manifest": "docs/extra/vaad_pipeline_repro_20260905/SHA256SUMS.txt"
+  },
+  "output_root": "results/late_blight_early_warning",
+  "random_seed": 20260910
+}

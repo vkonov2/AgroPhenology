@@ -1,0 +1,150 @@
+{
+  "contract_version": "3.0.0",
+  "contract_frozen_before_new_external_policy_replay": true,
+  "research_target": "first_recorded_potato_late_blight_in_field_season",
+  "scientific_scope": "retrospective_registration_proxy_not_biological_onset",
+  "parents": {
+    "cycle1": {
+      "run_id": "20260910_first_cycle_v3",
+      "path": "results/late_blight_early_warning/20260910_first_cycle_v3",
+      "execution_manifest_sha256": "c7976317e6d94b8d1ca55b0bd618226c769914280bd7896ca36b5e0ca2cf3c80"
+    },
+    "cycle2": {
+      "run_id": "20260910_second_cycle_v4",
+      "path": "results/late_blight_early_warning/20260910_second_cycle_v4",
+      "execution_manifest_sha256": "1355bc9742f397a893774ed02edd7b4080364714d49f208ed75b190d8fd856c0"
+    },
+    "immutability": "verify every manifest output hash before and after cycle3; never write into either parent run"
+  },
+  "inherited_endpoint": {
+    "class_mapping": {
+      "no_record_in_horizon": 0,
+      "imminent": 1,
+      "actionable": 2
+    },
+    "score": "probability_of_actionable_class_from_the_frozen_model_configuration",
+    "actionable_window_days": [3, 10],
+    "imminent_window_days": [0, 2],
+    "weather_cutoff_days_before_issue": 2,
+    "entry_censoring_observability_and_outer_folds": "unchanged_from_cycle1_contract_1.0.2_and_cycle2_contract_2.0.0",
+    "primary_period": [2020, 2025],
+    "incomplete_2026": "separate_descriptive_only"
+  },
+  "frozen_scores": {
+    "new_training": false,
+    "new_features": false,
+    "new_alpha_selection": false,
+    "models": [
+      "calendar_window",
+      "C0",
+      "C1",
+      "C4",
+      "C5",
+      "C6_weather",
+      "C6_calibration_control",
+      "C6_calendar_control"
+    ],
+    "cycle1_models": "load the saved outer-fold C0 C1 C4 C5 models only to reconstruct their original outer-validation scores; verify outer-test scores against saved predictions",
+    "cycle2_models": "use saved outer-validation and outer-test raw predictions and the alpha selected by v4 validation_selected for the same fold and scenario",
+    "calendar_window": "same train-only 5th-to-95th-percentile first-event day-of-year rule as cycle1",
+    "periodic_controls": "carry forward periodic_30d and every fixed k17 phase from v4 without external phase selection",
+    "c6_missing_weather": "retain exact C0 score fallback and one continuous notification state",
+    "c4_c5_missing_weather": "retain abstention; do not add fallback"
+  },
+  "evaluation_scopes": {
+    "service_calendar": "all service-active field-days in continuous calendar order; C6_weather falls back to C0 where its weather correction is unavailable",
+    "paired_candidate_days": "exact cycle1 candidate_comparison_complete mask; dates outside the mask remain elapsed calendar time and never compress cooldown"
+  },
+  "notification_policy": {
+    "active_days_per_message": 7,
+    "cooldown_days": 15,
+    "minimum_growth_repeat_interval_days": 7,
+    "logit_epsilon": 1e-6,
+    "growth_deltas": [
+      {"id": "disabled", "enabled": false, "logit_delta": null, "odds_multiplier": null},
+      {"id": "odds_x1_5", "enabled": true, "logit_delta": 0.4054651081081644, "odds_multiplier": 1.5},
+      {"id": "odds_x2", "enabled": true, "logit_delta": 0.6931471805599453, "odds_multiplier": 2.0},
+      {"id": "odds_x3", "enabled": true, "logit_delta": 1.0986122886681098, "odds_multiplier": 3.0}
+    ],
+    "growth_reference": "score stored at the last actually issued message of the same system",
+    "ordinary_issue": "score_at_or_above_theta_and_no_previous_message_or_elapsed_calendar_days_at_least_15",
+    "growth_override": "score_at_or_above_theta_and_7_le_elapsed_days_lt_15_and_reference_comparable_and_logit_score_growth_at_least_delta",
+    "state_update": "every real ordinary or growth message updates last date score origin model version and comparison segment and restarts cooldown and alarm",
+    "alarm_semantics": "message date plus six following dates inclusive; alarm_active does not itself block a message",
+    "research_budget": {
+      "messages_per_30_field_days_max": 2.0,
+      "active_alarm_fraction_max": 0.5,
+      "constraint_type": "validation_mean_soft_constraint_used_for_candidate_selection_not_a_hard_external_quota"
+    }
+  },
+  "score_comparability": {
+    "same_reference_requires": ["model_id", "model_version", "effective_score_origin", "continuous_valid_score_segment"],
+    "source_transition": "starts a new comparability segment but does not reset last message cooldown alarm or burden",
+    "missing_score": "starts a new comparability segment when a valid score later resumes; no future interpolation",
+    "c6_weather_alpha_zero": "effective origin is C0 on every day regardless of unused weather availability",
+    "c6_weather_positive_alpha": "effective origin is C6_weather when correction is available and C0_fallback otherwise",
+    "incomparable_reason": "growth_reference_not_comparable"
+  },
+  "coverage_reporting": {
+    "correction_unavailable": "raw frozen weather-correction availability diagnostic, regardless of whether alpha makes the correction active",
+    "fallback_to_c0": "actual use of C0 in place of an active positive-alpha C6 correction; always false when alpha is zero",
+    "effective_c0_origin": "days whose policy score effectively comes from C0, including all alpha-zero C6 days and positive-alpha fallback days",
+    "rule": "report these quantities separately and never call raw correction unavailability an operational fallback when alpha is zero"
+  },
+  "policy_families": {
+    "P0_saved": "exact saved theta with cooldown 15 and growth disabled",
+    "P0_selected": "growth disabled; theta selected on the same validation scores and same theta grid as all cycle3 candidates",
+    "P_growth_selected": "select theta and one of the fixed growth delta choices including disabled on outer-validation only",
+    "P_short_selected": "growth disabled; cooldown fixed to 7 days; theta selected on the same outer-validation scores and theta grid"
+  },
+  "selection": {
+    "population": "the actual outer-validation years of each frozen outer fold",
+    "theta_grid": "fixed 0.05 through 0.95 by 0.05 plus 1.000001 plus 5th through 95th validation score quantiles by 0.05 plus the saved theta; constructed only from service-active days in the current scope",
+    "same_theta_grid_within_score_fold_scope": true,
+    "ordering": [
+      "feasible_under_both_validation_budgets_before_infeasible",
+      "highest_validation_timely_recall",
+      "lowest_validation_messages_per_30_field_days",
+      "lowest_validation_active_alarm_fraction",
+      "simpler_growth_disabled_before_enabled",
+      "larger_growth_delta",
+      "highest_threshold"
+    ],
+    "if_no_feasible_policy": "minimum_sum_of_positive_budget_violations_then_the_same_ordering; record no_feasible_policy",
+    "external_budget_exceedance": "report without external retuning"
+  },
+  "population_audit": {
+    "eligible_definition": "warnable_first_event_true in the same A_plus_B outer-test population used by timely recall",
+    "entry_positive_definition": "first registered positive is already known when the service enters",
+    "required_gained_lost_invariants": [
+      "both_plus_gained_plus_lost_plus_neither_equals_eligible_events",
+      "both_plus_gained_equals_candidate_timely_events",
+      "both_plus_lost_equals_baseline_timely_events",
+      "gained_minus_lost_equals_candidate_minus_baseline_timely_events"
+    ]
+  },
+  "comparisons": {
+    "within_score": ["P0_saved", "P0_selected", "P_growth_selected", "P_short_selected"],
+    "weather_specificity": ["C6_weather", "C6_calibration_control", "C6_calendar_control", "calendar_window", "C0", "C1"],
+    "weather_models": ["C4", "C5", "C6_weather"],
+    "report_each_scope_separately": true,
+    "primary_service_interpretation": true
+  },
+  "uncertainty": {
+    "paired_year_bootstrap_repeats": 2000,
+    "seed": 20260910,
+    "leave_one_test_year_out": true,
+    "interpretation": "descriptive across six already studied years; does not include model selection registration timing or overlapping training uncertainty"
+  },
+  "prohibited": [
+    "train_or_tune_any_model_or_alpha",
+    "Optuna_Ranker_new_features_or_new_growth_function",
+    "change_endpoint_window_events_folds_censoring_cutoff_or_budgets",
+    "use_future_weather_phenology_visits_labels_or_event_date_in_the_policy",
+    "compress_calendar_time_or_reset_state_at_masks_source_changes_or_weather_gaps",
+    "write_into_cycle1_v3_or_cycle2_v4",
+    "publish_field_data_send_real_notifications_commit_or_push"
+  ],
+  "output_root": "results/late_blight_early_warning",
+  "random_seed": 20260910
+}

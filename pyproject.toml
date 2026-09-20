@@ -17,12 +17,30 @@ dependencies = [
 ]
 
 [project.optional-dependencies]
+early-warning = [
+  "catboost>=1.2.8,<1.3",
+  "joblib>=1.4,<2",
+  "optuna>=4.5,<5",
+  "pyarrow>=25,<26",
+  "scikit-learn>=1.9,<2",
+  "scipy>=1.13,<2",
+]
 dev = [
   "ipykernel>=6.25",
+  "jsonschema>=4.20,<5",
   "nbclient>=0.9",
   "nbformat>=5.9",
   "pytest>=7.4",
 ]
+
+[project.scripts]
+agro-late-blight-early-warning = "agro_phenology.early_warning_pipeline:main"
+agro-late-blight-cycle2 = "agro_phenology.early_warning_cycle2_pipeline:main"
+agro-late-blight-cycle3 = "agro_phenology.early_warning_cycle3_pipeline:main"
+agro-late-blight-shadow = "agro_phenology.shadow_cli:main"
+agro-late-blight-shadow-readiness = "agro_phenology.shadow_readiness_pipeline:main"
+agro-codling-moth-early-warning = "agro_phenology.target_early_warning_pipeline:main_codling"
+agro-apple-scab-early-warning = "agro_phenology.target_early_warning_pipeline:main_scab"
 
 [tool.setuptools.packages.find]
 where = ["src"]

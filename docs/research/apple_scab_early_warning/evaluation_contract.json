@@ -1,0 +1,209 @@
+{
+  "contract_version": "1.0.0",
+  "contract_date": "2026-09-20",
+  "target_key": "apple_scab",
+  "research_target": "first_registered_apple_scab_field_case_in_apple_field_season",
+  "scientific_scope": "retrospective_registration_proxy_not_biological_onset_or_treatment_recommendation",
+  "timezone": "Europe/Riga",
+  "daily_issue_time": "08:00:00",
+  "source_timestamp_precision": "calendar_date_only",
+  "visit_availability_assumption": "available_at_next_local_day_08_00",
+  "global_snapshot_date": "2026-08-31",
+  "host_filter": {
+    "crop_code": 41,
+    "crop_name": "apple",
+    "organism_id": 1213,
+    "organism_name_source": "Ābeļu kraupis"
+  },
+  "outcome_definition": {
+    "primary_event": "first_explicit_positive_field_record_for_organism_1213",
+    "positive_rule": "target_record_with_explicit_prevalence_greater_than_zero",
+    "explicit_zero_rule": "target_specific_zero_record_only",
+    "generic_absence_rule": "not_confirmed_target_specific_biological_absence",
+    "repeated_positive_rule": "not_a_new_first_event"
+  },
+  "season": {
+    "start_month_day": "04-01",
+    "end_month_day": "10-31",
+    "entry": "day_after_first_eligible_registry_visit",
+    "decision_calendar": "daily_from_entry_through_October_31_or_global_snapshot_boundary_independent_of_future_visit",
+    "service_stop": "first_primary_positive_record_available_to_the_service",
+    "negative_outcome_boundary": "last_registry_visit_is_used_only_by_the_evaluator_for_follow_up_censoring"
+  },
+  "timeliness_window_days": {
+    "minimum": 3,
+    "maximum": 10
+  },
+  "daily_target": {
+    "imminent": [0, 2],
+    "actionable": [3, 10],
+    "no_record_in_horizon": "no_first_primary_registry_record_through_issue_date_plus_10_with_observable_registry_follow_up",
+    "unknown": "mask_not_a_negative_class"
+  },
+  "main_population": "conservative_v2_A_plus_B_apple",
+  "sensitivity_populations": [
+    "direct_A_only"
+  ],
+  "weather_availability": {
+    "source": "frozen_nasa_power_daily",
+    "input_path": "docs/extra/vaad_pipeline_repro_20260905/frozen_external/nasa_daily.parquet",
+    "coordinate_mapping": "local_nearest_grid_cell_among_cells_present_in_the_frozen_source",
+    "mapping_metric": "nearest_latitude_longitude_cell_with_longitude_distance_scaled_by_cosine_latitude",
+    "cutoff_days_before_issue": 2,
+    "day_grid": "UTC",
+    "status": "retrospective_past_only_assumption_not_historical_publication_log",
+    "no_future_fill": true,
+    "no_cross_source_fill": true
+  },
+  "rolling_origin_folds": [
+    {
+      "id": "test_2020",
+      "train_years": [2010, 2017],
+      "validation_years": [2018, 2019],
+      "test_years": [2020, 2020]
+    },
+    {
+      "id": "test_2021",
+      "train_years": [2010, 2018],
+      "validation_years": [2019, 2020],
+      "test_years": [2021, 2021]
+    },
+    {
+      "id": "test_2022",
+      "train_years": [2010, 2019],
+      "validation_years": [2020, 2021],
+      "test_years": [2022, 2022]
+    },
+    {
+      "id": "test_2023",
+      "train_years": [2010, 2020],
+      "validation_years": [2021, 2022],
+      "test_years": [2023, 2023]
+    },
+    {
+      "id": "test_2024",
+      "train_years": [2010, 2021],
+      "validation_years": [2022, 2023],
+      "test_years": [2024, 2024]
+    },
+    {
+      "id": "test_2025",
+      "train_years": [2010, 2022],
+      "validation_years": [2023, 2024],
+      "test_years": [2025, 2025]
+    },
+    {
+      "id": "test_2026_partial",
+      "train_years": [2010, 2023],
+      "validation_years": [2024, 2025],
+      "test_years": [2026, 2026],
+      "incomplete": true,
+      "primary_pooled_result": false
+    }
+  ],
+  "period_interpretation": {
+    "years_2023_2025_already_studied": true,
+    "external_periods_are_not_untouched": true,
+    "year_2026": "incomplete_descriptive_only_not_used_for_selection_or_primary_pooled_result"
+  },
+  "model_matrix": {
+    "calendar_window": "training_only_first_event_day_of_year_quantile_window_fixed_before_test_scoring",
+    "O0": "multinomial_logistic_calendar",
+    "O1": "catboost_calendar",
+    "O2": "catboost_calendar_plus_common_past_weather",
+    "O3": "catboost_calendar_plus_same_common_past_weather_plus_apple_scab_target_features",
+    "O4": "multinomial_logistic_same_O3_features"
+  },
+  "calendar_window_training_event_quantiles": [0.05, 0.95],
+  "calendar_features": [
+    "day_of_year_sin_1",
+    "day_of_year_cos_1",
+    "day_of_year_sin_2",
+    "day_of_year_cos_2"
+  ],
+  "common_past_weather": {
+    "windows_days": [7, 14, 30],
+    "variables": [
+      "temperature_mean",
+      "temperature_minimum",
+      "temperature_maximum",
+      "relative_humidity_mean",
+      "precipitation_sum",
+      "precipitation_day_count",
+      "active_temperature_sum"
+    ]
+  },
+  "target_features": {
+    "warm_wet_day_proxy": {
+      "precipitation_mm_minimum": 0.1,
+      "relative_humidity_percent_minimum": 80.0,
+      "temperature_celsius_minimum": 5.0,
+      "temperature_celsius_maximum": 25.0
+    },
+    "windows_days": [3, 7, 14],
+    "derived_features": [
+      "warm_wet_proxy_day_count",
+      "current_consecutive_warm_wet_proxy_days",
+      "days_since_last_warm_wet_proxy_day"
+    ],
+    "interpretation": "daily_rain_humidity_temperature_proxy_only_not_Mills_infection_period",
+    "mills_limitation": "Mills_requires_temperature_during_a_continuously_wet_period_and_leaf_wetness_duration_which_are_not_observed_in_the_frozen_daily_NASA_input"
+  },
+  "model_training_population": "same_observable_candidate_comparison_complete_rows_for_O0_to_O4",
+  "catboost_fixed": {
+    "iterations": 220,
+    "depth": 3,
+    "learning_rate": 0.05,
+    "l2_leaf_reg": 8.0,
+    "loss_function": "MultiClass",
+    "random_seed": 20260920
+  },
+  "optuna": {
+    "enabled": false,
+    "reason": "first_fixed_parameter_pass"
+  },
+  "notification_policy": {
+    "family": "existing_threshold_active_window_and_cooldown",
+    "active_days_per_message": 7,
+    "cooldown_days": 15,
+    "threshold_selection": "validation_only_fixed_grid",
+    "threshold_grid": [0.05, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 0.95, 1.000001],
+    "research_budget": {
+      "messages_per_30_field_days_max": 2.0,
+      "active_alarm_fraction_max": 0.5
+    },
+    "equal_budget_interpretation": "equal_allowed_budget_does_not_imply_equal_realized_burden"
+  },
+  "evaluation_scopes": {
+    "service_calendar": "all_active_field_days_weather_dependent_models_abstain_when_required_frozen_weather_is_unavailable",
+    "paired_candidate_days": "same_weather_complete_candidate_days_and_same_eligible_events_for_O0_to_O4"
+  },
+  "primary_metrics": [
+    "timely_first_events",
+    "eligible_first_events",
+    "timely_recall",
+    "messages",
+    "messages_per_30_field_days",
+    "active_alarm_days",
+    "active_alarm_fraction",
+    "computable_fraction"
+  ],
+  "uncertainty": "paired_year_bootstrap_and_year_level_results_descriptive_due_to_reused_years_and_few_year_clusters",
+  "selection": {
+    "threshold_and_policy_data": "validation_only",
+    "test_labels_not_used_for_model_or_policy_selection": true,
+    "success_criterion_not_changed_after_results": true
+  },
+  "inputs": {
+    "conservative_v2_csv": "docs/extra/vaad_pipeline_repro_20260905/data/vaad_observations_geocoded_conservative_v2.csv",
+    "frozen_external_dir": "docs/extra/vaad_pipeline_repro_20260905/frozen_external",
+    "sha256_manifest": "docs/extra/vaad_pipeline_repro_20260905/SHA256SUMS.txt"
+  },
+  "privacy": {
+    "field_data_remain_local": true,
+    "reports_and_review_packages": "aggregate_only_no_field_ids_coordinates_or_raw_observation_text",
+    "public_weather_field_linkage": "local_only"
+  },
+  "output_root": "results/apple_scab_early_warning",
+  "random_seed": 20260920
+}
