@@ -1,0 +1,80 @@
+{
+  "contract_version": "1.0.0",
+  "status": "frozen_before_first_score_evaluation",
+  "interpretation_clarification": "after_first_replay_only_wording_of_observation_interval_corrected_no_change_to_scores_events_policy_or_metrics",
+  "dataset_id": "daks_cpb_2019_2022",
+  "collection_version": "20261110_external_v2",
+  "weather_version": "20261110_era5_v2",
+  "scientific_scope": "retrospective_external_pilot_first_recorded_early_larvae_after_observed_eggs",
+  "organism": "Leptinotarsa decemlineata",
+  "crop": "potato",
+  "treatment": "control_only",
+  "unit": "one_field_series_per_season_not_individual_plants",
+  "timezone": "Europe/Berlin",
+  "issue_time": "08:00:00",
+  "model": {
+    "id": "CPB_DD120_persistence7",
+    "source_url": "https://vegento.russell.wisc.edu/pests/colorado-potato-beetle/",
+    "lower_temperature_f": 52.0,
+    "upper_temperature_f": 86.0,
+    "threshold_f_degree_days": 120.0,
+    "degree_day_method": "hourly_clipped_temperature_excess_divided_by_24",
+    "method_status": "explicit_hourly_approximation_not_claimed_identical_to_daily_sine_method",
+    "biofix": "first_positive_egg_observation_in_control_available_next_local_day",
+    "biofix_interpretation": "observed_eggs_not_known_oviposition_date",
+    "includes_biofix_day": true,
+    "weather_lag_days": 5,
+    "weather_availability_status": "assumed_conservative_ERA5_lag_not_reconstructed_historical_publication_log",
+    "persistence_days": 7,
+    "future_weather": "fixed_mean_daily_DD_rate_from_last_7_fully_available_local_days",
+    "unavailable_gap_weather": "same_persistence_estimate_never_actual_unavailable_or_future_ERA5",
+    "score": "one_if_predicted_date_between_issue_plus_3_and_issue_plus_10_else_zero",
+    "missing_or_zero_temperature_rate": "abstain_not_impute"
+  },
+  "calendar_control": {
+    "id": "calendar_biofix_plus_7_days",
+    "predicted_date": "first_observed_egg_date_plus_7_calendar_days",
+    "rationale": "predeclared_simple_midpoint_control_from_published_4_to_9_day_range_rounded_up",
+    "score": "same_3_to_10_day_forecast_date_window",
+    "training_or_tuning": "none"
+  },
+  "outcome": {
+    "stages": ["larva_1", "larva_2"],
+    "positive": "any_measured_value_greater_than_zero",
+    "zero": "all_scheduled_values_for_both_stages_present_and_zero",
+    "unknown": "no_positive_and_any_missing_value",
+    "first_event": "first_positive_L1_or_L2_registration_at_or_after_biofix",
+    "eligible": "first_event_after_biofix_and_complete_zero_on_or_after_biofix_before_event_and_at_least_3_days_warning_opportunity",
+    "zero_on_biofix_day_allowed": true,
+    "positive_at_entry": "left_censored_excluded_from_eligible_denominator_reported_separately",
+    "repeated_positives": "not_new_events",
+    "observation_interval_proxy": "last_complete_sampled_zero_exclusive_to_first_positive_inclusive_not_proven_bounds_of_true_field_onset"
+  },
+  "decision_calendar": {
+    "entry": "day_after_first_observed_eggs",
+    "grid_end": "October_31_independent_of_next_visit",
+    "service_stop": "first_positive_early_larvae_record_available_next_local_day",
+    "evaluation_boundary": "last_assessment_used_only_by_evaluator_for_censoring",
+    "absence_between_visits": "unknown_not_negative"
+  },
+  "notification_policy": {
+    "threshold": 0.5,
+    "active_days": 7,
+    "cooldown_days": 15,
+    "success_window_days": [3, 10],
+    "message_budget_per_30_field_days": 2.0,
+    "alarm_day_budget_fraction": 0.5,
+    "budget_exceedance": "report_unchanged_no_external_tuning"
+  },
+  "evaluation": {
+    "primary": ["timely_hits_over_eligible_events", "messages", "alarm_days", "computability"],
+    "secondary": ["initial_issue_date_error_against_registration", "initial_issue_distance_to_censored_onset_interval"],
+    "uncertainty": "Wilson_recall_interval_and_paired_field_series_bootstrap_difference_exploratory_with_two_eligible_events",
+    "bootstrap_replicates": 2000,
+    "seed": 20261110,
+    "training": "none_published_parameters_and_predeclared_calendar_only",
+    "temporal_split": "not_applicable_no_fit_or_selection_all_2019_to_2022_external_replay",
+    "untouched_test_claim": false,
+    "pool_other_datasets": false
+  }
+}
