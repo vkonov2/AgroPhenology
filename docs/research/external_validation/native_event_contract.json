@@ -1,0 +1,72 @@
+{
+  "version": "1.0.0",
+  "status": "fixed_before_first_fit_and_quality_evaluation",
+  "purpose": "new_statistical_first_registration_models_not_reproduction_of_AHDB_or_UW_biological_formulas",
+  "dataset_version": "20261110_external_v2",
+  "targets": {
+    "kbs_myzus": {"dataset": "kbs_aphid_suction_2005_2013", "organism": "Myzus persicae", "warmup_years": [2005,2006,2007], "outer_years": [2008,2009,2010,2011,2012,2013]},
+    "kbs_macrosiphum": {"dataset": "kbs_aphid_suction_2005_2013", "organism": "Macrosiphum euphorbiae", "warmup_years": [2005,2006,2007], "outer_years": [2008,2009,2010,2011,2012,2013]},
+    "kbs_gossypii": {"dataset": "kbs_aphid_suction_2005_2013", "organism": "Aphis gossypii", "warmup_years": [2005,2006,2007], "outer_years": [2008,2009,2010,2011,2012,2013]},
+    "cutworm": {"dataset": "zenodo_6351794", "organism": "Agrotis ipsilon", "warmup_years": [1997,1998,1999], "outer_years": [2000,2001,2002,2003,2004,2005,2006,2007,2008,2009,2010,2011,2012,2013,2014,2015,2016,2017,2018,2019]},
+    "cpb_wisconsin": {"dataset": "zenodo_18664442", "organism": "Leptinotarsa decemlineata", "warmup_years": [2008,2009,2010], "outer_years": [2011,2012,2013,2014,2015,2016,2017,2018,2019,2020,2021,2022,2023]}
+  },
+  "cohort": {
+    "pre_fit_outer_audit": {"kbs_myzus_reported": {"series":189,"warnable":162}, "kbs_macrosiphum_reported": {"series":198,"warnable":141}, "kbs_gossypii_reported": {"series":207,"warnable":167}, "cutworm_reported": {"series":1117,"warnable":1086}, "cpb_wisconsin_reported": {"series":2461,"warnable":2229}, "kbs_myzus_sensitivity": {"series":162,"warnable":141}, "kbs_macrosiphum_sensitivity": {"series":171,"warnable":123}, "kbs_gossypii_sensitivity": {"series":180,"warnable":147}},
+    "entry": "first_source_visit_must_have_complete_reported_zero_target_count_no_search_for_convenient_later_zero",
+    "event": "first_registered_positive_target_measurement_not_true_arrival_or_crop_damage",
+    "kbs": "merge_F_and_M_within_collection_positive_if_any_measured_positive_zero_only_both_complete_zero_otherwise_unknown",
+    "cpb": "all_larval_instars_proxy_not_L1_only_any_reported_positive_at_field_date_complete_reported_zeros_required_for_zero_conflicting_duplicate_counts_never_averaged",
+    "cpb_forbidden": ["source_Day", "source_Week", "cum_dd", "stage_period_weather_aggregates", "invented_coordinates"],
+    "first_event_window": "through_fixed_October_31_each_season",
+    "warning_opportunity": "event_date_at_least_entry_plus_4_calendar_days",
+    "short_events": "retained_in_training_and_service_burden_but_not_warnable_event_denominator",
+    "positive_at_entry": "left_censored_not_new_warnable_event",
+    "missing": "unknown_not_zero_or_negative",
+    "right_censor": "last_measured_source_visit_before_or_on_October_31_not_implicit_observation_to_season_end",
+    "kbs_primary_zero_mode": "reported",
+    "kbs_fixed_sensitivity_zero_mode": "all_taxa_zero_unknown_never_choose_better_result",
+    "no_pooling": "each_dataset_organism_outcome_and_zero_mode_has_its_own_denominators_and_metrics"
+  },
+  "models": {
+    "CatBoost_AFT_entry": {
+      "target": "days_from_entry_to_first_registration_point_interval_or_right_censored_duration",
+      "loss": "SurvivalAft:dist=Normal;scale=1",
+      "depth": 3,
+      "iterations": 200,
+      "learning_rate": 0.03,
+      "l2_leaf_reg": 10,
+      "bootstrap_type": "No",
+      "random_seed": 20261110,
+      "thread_count": 2,
+      "prediction": "raw_log_time_then_exp_normal_median_round_half_up_min_1_day_no_clipping_to_end_of_season",
+      "features": "entry_day_of_year_and_known_station_or_rounded_location_category_except_anonymous_Wisconsin_uses_entry_day_of_year_and_entry_egg_adult_presence",
+      "station_not_weather": true,
+      "no_current_year_fit": true
+    },
+    "calendar_past_station_median": {
+      "prediction": "median_first_registration_DOY_from_strict_past_years_station_median_if_at_least_3_observed_events_otherwise_global_median_round_half_up",
+      "Wisconsin": "global_median_only_geographic_group_identity_unavailable"
+    }
+  },
+  "validation": {
+    "scheme": "expanding_temporal_past_only_refit_per_outer_year",
+    "parameter_or_policy_selection": "none_fixed_before_first_quality_run_no_Optuna_no_Ranker",
+    "already_studied_years": "retrospective_external_benchmark_not_new_untouched_test",
+    "uncertainty": "paired_bootstrap_by_station_or_source_location_and_separately_year_block_Wisconsin_year_block_only",
+    "bootstrap_replicates": 2000,
+    "seed": 20261110,
+    "primary": ["timely_warnable_event_coverage", "messages", "active_alarm_days", "computability"],
+    "primary_burden_scope": "observed_followup_until_first_registration_or_last_measured_visit",
+    "additional_burden_scope": "full_service_calendar_continues_right_censored_unknown_tails_to_October_31_no_absence_labels_invented",
+    "secondary": ["first_issue_absolute_date_error_to_registration", "gained_lost_on_same_event_ids", "censoring_and_entry_exclusions", "year_specific_budget_exceedance"],
+    "not_claimed": ["biological_presence_accuracy", "calibrated_risk_probability", "crop_damage_forecast", "causal_weather_gain", "independence_of_all_field_year_rows"]
+  },
+  "decisions": {
+    "first_issue": "day_after_source_entry_record",
+    "grid_end": "October_31_independent_of_next_visit",
+    "stop": "first_positive_record_available_following_local_day",
+    "time": "assumed_local_08_00_time_zone_unknown_for_multiple_US_stations_not_claimed_UTC"
+  },
+  "policy": {"family": "existing_P0", "threshold": 0.5, "score": "one_if_static_entry_prediction_date_in_issue_plus_3_to_10_inclusive_else_zero", "active_days": 7, "cooldown_days": 15, "message_budget_per_30_field_days": 2.0, "alarm_fraction_budget": 0.5, "external_exceedance": "report_no_retuning"},
+  "privacy": "raw_observations_station_names_coordinates_and_trained_models_remain_local_public_reports_aggregate_only"
+}

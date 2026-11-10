@@ -1,0 +1,27 @@
+{
+  "version": "1.0.0",
+  "status": "frozen_before_first_full_comparison",
+  "purpose": "numerical_formula_validation_not_biological_prediction_quality",
+  "dataset": "ucanr_degree_day_challenge",
+  "repository_commit": "1766f1c8f53ab32d7dd023bba9a748d555351a04",
+  "units": "Fahrenheit_degree_days",
+  "lower_threshold": 50.0,
+  "upper_threshold": 70.0,
+  "methods": ["sngsine_horiz", "sngsine_vert", "sngsine_intrmd", "dblsine_horiz", "dblsine_vert", "dblsine_intrmd", "sngtri_horiz", "sngtri_vert", "sngtri_intrmd", "dbltri_horiz", "dbltri_vert", "dbltri_intrmd"],
+  "formula_source": "https://ipm.ucanr.edu/weather/ddroutines.html",
+  "cutoff_semantics": {
+    "horizontal": "area_above_lower_minus_area_above_upper",
+    "vertical": "horizontal_minus_threshold_span_times_fraction_above_upper",
+    "intermediate": "horizontal_minus_min(area_above_upper,vertical_removal)_as_documented_UCIPM_routine",
+    "double": "average_components_of_today_min_to_max_and_today_max_to_next_day_min_then_apply_cutoff"
+  },
+  "boundary": "no_next_day_minimum_on_December_31_double_methods_abstain_not_repeat_or_impute",
+  "missing_temperatures": "abstain_not_zero",
+  "invalid_order": "reject",
+  "primary_metrics": ["number_of_computable_daily_values", "mean_absolute_error", "max_absolute_error", "agreement_at_half_rounding_unit_0.0050001"],
+  "additional_fixed_tolerances": [0.01, 0.1],
+  "cumulative": "sum_only_the_common_contiguous_daily_values_compare_to_sum_of_published_rounded_daily_values_not_unrounded_calculator_internal_total",
+  "training_or_tuning": "none",
+  "outcome_quality": "no_insect_or_disease_groundtruth_no_event_recall_AP_accuracy_or_notification_claim",
+  "reference_certification": "local_comparison_not_official_submission_or_badge"
+}

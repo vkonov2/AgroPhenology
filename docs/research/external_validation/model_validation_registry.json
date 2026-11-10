@@ -1,0 +1,44 @@
+{
+  "version": "20261110_expanded",
+  "metric_partition": "dataset_version_and_organism_and_observed_endpoint_and_measurement_and_treatment_and_zero_mode_and_temporal_scope",
+  "no_cross_dataset_pooled_score": true,
+  "supplemental_control": {"model": "calendar_entry_duration", "timing": "post_hoc_after_initial_AFT_results_one_fixed_diagnostic_no_tuning_no_new_independent_test", "base_models_retrained": false, "run": "results/external_validation/native_first_events/20261110_entry_control_v1", "primary_hits": {"cpb_wisconsin": {"AFT":913,"DOY":752,"ENTRY":603,"events":2229}, "cutworm": {"AFT":704,"DOY":421,"ENTRY":688,"events":1086}, "kbs_myzus": {"AFT":11,"DOY":8,"ENTRY":21,"events":162}, "kbs_macrosiphum": {"AFT":10,"DOY":4,"ENTRY":12,"events":141}, "kbs_gossypii": {"AFT":17,"DOY":15,"ENTRY":20,"events":167}}},
+  "field_validation": [
+    {"model": "UW_CPB_hourly_clipped_persistence", "dataset": "daks_cpb_2019_2022", "outcome": "first_registered_L1_or_L2_after_observed_eggs", "events": 2, "status": "completed_tiny_pilot_no_advantage", "run": "results/external_validation/daks_cpb_2019_2022/20261110_cpb_dd_v2"},
+    {"model": "Luke_DD260_persistence7", "dataset": "zenodo_6351794", "outcome": "first_spring_registered_adult_Psila_rosae", "events": 54, "status": "completed_temporal_no_coverage_advantage", "run": "results/external_validation/zenodo_6351794/20261110_carrot_spring_v1"},
+    {"model": "CatBoost_AFT_entry", "target": "kbs_myzus", "outcome": "first_registered_adult_capture", "events": 162, "status": "completed_temporal_fixed_model", "run": "results/external_validation/native_first_events/20261110_suite_v2/kbs_myzus_reported"},
+    {"model": "CatBoost_AFT_entry", "target": "kbs_macrosiphum", "outcome": "first_registered_adult_capture", "events": 141, "status": "completed_temporal_fixed_model", "run": "results/external_validation/native_first_events/20261110_suite_v2/kbs_macrosiphum_reported"},
+    {"model": "CatBoost_AFT_entry", "target": "kbs_gossypii", "outcome": "first_registered_adult_capture", "events": 167, "status": "completed_temporal_fixed_model", "run": "results/external_validation/native_first_events/20261110_suite_v2/kbs_gossypii_reported"},
+    {"model": "CatBoost_AFT_entry", "target": "cutworm", "outcome": "first_registered_adult_Agrotis_ipsilon_capture", "events": 1086, "status": "completed_higher_coverage_with_budget_exceedance", "run": "results/external_validation/native_first_events/20261110_suite_v2/cutworm_reported"},
+    {"model": "CatBoost_AFT_entry", "target": "cpb_wisconsin", "outcome": "first_registered_larvae_all_instars", "events": 2229, "status": "completed_temporal_conditional_on_known_zero_entry", "run": "results/external_validation/native_first_events/20261110_suite_v2/cpb_wisconsin_reported"}
+  ],
+  "fixed_sensitivities": [
+    {"model": "Luke_DD260", "setting": "weather_lag_7_instead_of_5", "selection": "predeclared_not_chosen_by_external_quality"},
+    {"targets": ["kbs_myzus", "kbs_macrosiphum", "kbs_gossypii"], "setting": "all_taxa_zero_unknown", "events": [141,123,147], "selection": "predeclared_not_chosen_by_external_quality", "independent_datasets": false}
+  ],
+  "numeric_only": [
+    {"family": "UCANR_single_double_sine_triangle", "methods": 12, "comparable_reference_values": 4386, "reference_values_total": 4392, "status": "all_comparable_errors_at_most_0.01_F_degree_days", "biological_validation": false, "run": "results/external_validation/ucanr_degree_day_challenge/20261110_benchmark_v1"}
+  ],
+  "implemented_without_matching_field_outcomes": [
+    {"id": "codling_ncstate_thresholds", "organism": "Cydia pomonella", "status": "explicit_NC_milestones_UCIPM_calculator_adaptation", "blocker": "no_observed_egg_hatch_after_known_biofix_cohort_numeric_supplements_not_available_adult_trap_capture_is_different_endpoint"},
+    {"id": "cabbage_maggot_uw", "organism": "Delia radicum", "status": "explicit_single_sine_adaptation", "blocker": "no_regular_generation_observations_or_observed_ground_thaw_anchor"},
+    {"id": "diamondback_harcourt_cabbage", "organism": "Plutella xylostella", "status": "single_sine_published_parameter_adaptation", "blocker": "no_observed_egg_cohort_to_adult_generation_data"},
+    {"id": "diamondback_butts_brussels_sprouts", "organism": "Plutella xylostella", "status": "separate_host_specific_published_parameter_adaptation", "blocker": "no_observed_egg_cohort_to_adult_generation_data"}
+  ],
+  "not_validated_and_not_replaced_by_unverified_proxy": [
+    {"model": "AHDB_winter_temperature_aphid_regression", "blocker": "no_full_46_station_georegistry_or_winter_weather_coefficients_not_published_new_AFT_is_not_AHDB"},
+    {"model": "Mills_apple_scab", "blocker": "no_measured_leaf_wetness_or_phenology_homogeneous_first_event_groups_at_most_4_large_temporal_warning_test_unavailable"},
+    {"model": "grape_downy_mildew_rules", "blocker": "leaf_infection_intensity_20_first_events_total_but_9_after_three_initial_observed_years_zero_positive_gaps_20_to_100_days_no_exact_infection_dates"},
+    {"model": "Hutton_external_potato_trial_audit", "blocker": "previous_auxiliary_audit_was_automatically_rejected_for_biological_content_not_retried_via_other_route_prior_VAAD_work_preserved"},
+    {"model": "Smith_and_Blitecast", "blocker": "new_external_plant_disease_validation_not_performed_not_claimed_by_this_package"},
+    {"model": "TOMCAST_and_P_days", "blocker": "no_matching_Alternaria_outcomes_emergence_anchor_or_measured_leaf_wetness_in_current_collection"},
+    {"model": "DOWNCAST", "blocker": "no_matching_Allium_outcomes_or_measured_wetness_inputs"},
+    {"model": "Strawberry_Advisory_Botrytis_Colletotrichum", "blocker": "no_confirmed_strawberry_outcomes_flowering_and_measured_leaf_wetness"},
+    {"model": "apple_cucurbit_powdery_mildew_and_cucurbit_downy_mildew", "blocker": "no_confirmed_cohort_AgriDataValue_labels_unverified_daily_labels_not_independent_ground_truth"},
+    {"model": "spider_mite_and_gooseberry_favourable_day_rules", "blocker": "original_list_contains_author_proposed_unvalidated_thresholds_no_matching_sequential_outcomes"},
+    {"model": "Brevicoryne_brassicae", "blocker": "only_two_positive_source_rows_no_meaningful_training_validation_population"}
+  ],
+  "auxiliary_not_groundtruth": ["GBIF_presence_only", "regional_publication_signals", "RIS_annual_all_species_totals", "AgriDataValue_unverified_daily_disease_labels"],
+  "prior_frozen_models_and_data": "unchanged",
+  "privacy": "no_raw_field_data_coordinates_station_identifiers_or_trained_weights_in_git"
+}

@@ -54,24 +54,26 @@ def test_daks_preserves_life_stages_treatments_and_missing_values(tmp_path: Path
 
 def test_cpb_does_not_promote_preaggregated_weather_to_safe_features(tmp_path: Path) -> None:
     raw = _raw(tmp_path)
+    # Deliberately synthetic identifiers, dates and measurements. These rows
+    # exercise the schema without redistributing observations from a field.
     pd.DataFrame({
-        "Date": ["6/3/2008", "6/9/2008"], "plot_ID": ["40_2008"] * 2,
-        "adults": [0., .8], "larvae": [0., 0.], "eggs": [float("nan"), .2],
-        "Summer.Adults_maxtempMed": [79.16] * 2, "cum_dd": [267.69, 362.35],
+        "Date": ["5/1/2020", "5/8/2020"], "plot_ID": ["synthetic_plot_a_2020"] * 2,
+        "adults": [0., .625], "larvae": [0., 0.], "eggs": [float("nan"), .125],
+        "Summer.Adults_maxtempMed": [55.] * 2, "cum_dd": [100., 140.],
     }).to_csv(raw / "files/WI_CPB_preformatted.csv", index=False)
     result = normalize(_source("zenodo_18664442"), raw, tmp_path / "out")
     rows = pd.read_parquet(tmp_path / "out/observations.parquet")
     assert len(rows) == 6
-    assert .8 in rows.value.tolist()
+    assert .625 in rows.value.tolist()
     assert "Summer.Adults_maxtempMed" in result["excluded_predictor_columns"]
     assert "Summer.Adults_maxtempMed" not in rows.columns
     assert "cum_dd" not in rows.columns
     assert rows[rows.value.isna()].explicit_zero.eq(False).all()
-    assert result["date_range"] == {"minimum": "2008-06-03", "maximum": "2008-06-09"}
+    assert result["date_range"] == {"minimum": "2020-05-01", "maximum": "2020-05-08"}
     assert rows.loc[rows.source_column.eq("eggs"), "stage"].eq("egg_mass").all()
     assert rows.loc[rows.source_column.eq("eggs"), "unit"].eq("egg_masses_per_plant").all()
     assert rows.loc[rows.source_column.isin(["adults", "larvae"]), "unit"].eq("mean_individuals_per_25_sweeps").all()
-    assert rows.loc[rows.source_column.eq("eggs"), "value"].iloc[1] == .2
+    assert rows.loc[rows.source_column.eq("eggs"), "value"].iloc[1] == .125
 
 
 @pytest.mark.parametrize("trial,extra_header,extra_value", [
@@ -146,19 +148,20 @@ def test_ris_annual_never_fabricates_first_flight_or_zero_when_trap_off(tmp_path
 
 def test_kbs_comment_preamble_and_explicit_zero_are_preserved(tmp_path: Path) -> None:
     raw = _raw(tmp_path)
+    # The station label, date and nonzero count are invented for this test.
     (raw / "files/aphid_suction_2005_2013.csv").write_text(
         "# These data require publication permission\n"
         "sample_date,state,station,species,sex,count\n"
         "#,,,,,number\n"
-        "2013-10-25,IA,Ames,Myzus.persicae,F,0\n"
-        "2013-10-25,IA,Ames,Myzus.persicae,M,2\n"
+        "2020-05-01,SYN,station_a,Myzus.persicae,F,0\n"
+        "2020-05-01,SYN,station_a,Myzus.persicae,M,3\n"
     )
     result = normalize(_source("kbs_aphid_suction_2005_2013"), raw, tmp_path / "out")
     rows = pd.read_parquet(tmp_path / "out/observations.parquet")
     assert result["rows"] == 2
     assert rows.organism.tolist() == ["Myzus persicae"] * 2
     assert rows.sex.tolist() == ["F", "M"]
-    assert rows.site_id.eq("IA:Ames").all()
+    assert rows.site_id.eq("SYN:station_a").all()
     assert rows.explicit_zero.tolist() == [True, False]
     assert result["organism_rows"] == {"Myzus persicae": 2}
 

@@ -1,0 +1,36 @@
+{
+  "version": "1.0.0",
+  "status": "fixed_before_supplement_quality_after_review_of_native_v2_results",
+  "purpose": "post_hoc_diagnostic_control_for_known_monitoring_entry_date_not_new_independent_test",
+  "question": "does_frozen_AFT_add_timing_information_beyond_the_known_date_monitoring_started",
+  "base": "immutable_native_first_events_20261110_suite_v2_each_dataset_species_zero_mode_separate",
+  "frozen": ["AFT_models", "DOY_calendar_models", "point_predictions", "decisions", "full_notification_histories", "event_population", "policy", "outer_years"],
+  "new_control": {
+    "id": "calendar_entry_duration",
+    "training": "included_registry_series_from_strictly_prior_years_same_as_AFT_training",
+    "label": "days_from_first_observed_zero_entry_to_first_registered_positive",
+    "point_events": "all_observed_after_zero_events_including_short_warning_events",
+    "right_censored": "not_imputed_event_dates_and_not_used_for_median_but_retained_in_service_burden",
+    "prediction": "entry_date_plus_past_median_positive_event_duration",
+    "local": "station_or_source_location_median_if_at_least_3_prior_observed_events_otherwise_global",
+    "Wisconsin": "global_only_geography_unknown",
+    "rounding": "round_half_up_minimum_one_day_no_clipping_to_October_31",
+    "features": ["known_entry_date", "known_station_or_source_location_except_Wisconsin"],
+    "no_search": "one_fixed_control_no_threshold_grid_no_hyperparameter_or_policy_tuning"
+  },
+  "evaluation": {
+    "same_events_and_exposures": true,
+    "scopes": ["observed_followup", "full_service_calendar"],
+    "policy": {"family": "native_fixed_P0_v1", "threshold": 0.5, "active_days": 7, "cooldown_days": 15, "success_window_days": [3, 10]},
+    "score": "one_if_static_predicted_date_in_issue_plus_3_to_10_else_zero",
+    "message_budget_per_30_field_days": 2.0,
+    "alarm_fraction_budget": 0.5,
+    "external_budget_exceedance": "report_unchanged",
+    "uncertainty": "paired_AFT_minus_ENTRY_bootstrap_same_blocks_as_frozen_base",
+    "bootstrap_replicates": 2000,
+    "seed": 20261110,
+    "selection_warning": "control_was_added_after_seeing_v2_results_not_preregistered_base_experiment_not_new_untouched_test",
+    "no_pooling": "dataset_organism_zero_mode_and_scope_remain_separate"
+  },
+  "privacy": "all_field_station_ids_per_series_outputs_and_source_data_stay_local_public_reports_aggregate_only"
+}
