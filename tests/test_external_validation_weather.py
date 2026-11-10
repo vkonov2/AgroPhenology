@@ -9,7 +9,7 @@ import pytest
 
 from agro_phenology.external_validation_io import DownloadError
 from agro_phenology.external_validation_io import file_inventory, write_json
-from agro_phenology.external_validation_weather import HOURLY_VARIABLES, _normalize_response, build_plan, check, fetch, main
+from agro_phenology.external_validation_weather import HOURLY_VARIABLES, _normalize_response, build_plan, check, fetch, main, plan as save_plan
 
 
 def _cohort(root: Path, source: str, *, dates=("2020-06-01",), lat=50.01, lon=8.01, site="site1") -> None:
@@ -174,3 +174,139 @@ def test_completed_manifest_does_not_hide_changed_normalized_inputs(tmp_path) ->
     (tmp_path / "normalized/zenodo_6352735/locations.parquet").write_bytes(b"modified")
     with pytest.raises(ValueError, match="integrity check failed"):
         build_plan(tmp_path)
+
+
+def test_request_selection_filters_requests_and_preserves_all_shared_source_mappings(tmp_path) -> None:
+    _cohort(tmp_path, "zenodo_6352735", dates=("2020-06-01", "2021-06-01"))
+    _cohort(tmp_path, "zenodo_6520484", dates=("2020-06-02",), lat=50.04, lon=8.02)
+    _cohort(tmp_path, "zenodo_6351794", dates=("2022-06-01",), lat=53, lon=9)
+    full = build_plan(tmp_path)
+    selected_id = next(r["request_id"] for r in full["requests"] if r["year"] == 2020)
+    selected = build_plan(tmp_path, request_ids={selected_id})
+    assert [r["request_id"] for r in selected["requests"]] == [selected_id]
+    assert selected["selected_request_ids"] == [selected_id]
+    assert len(selected["site_request_mapping"]) == 2
+    assert {m["source_id"] for m in selected["site_request_mapping"]} == {"zenodo_6352735", "zenodo_6520484"}
+    assert all(m["request_id"] == selected_id for m in selected["site_request_mapping"])
+    assert selected["input_hashes"] == full["input_hashes"]
+    assert selected["requests"][0] == full["requests"][0]
+
+
+def test_default_plan_adds_no_selection_key_and_explicit_none_is_identical(tmp_path) -> None:
+    _cohort(tmp_path, "zenodo_6352735")
+    implicit = build_plan(tmp_path)
+    explicit_none = build_plan(tmp_path, request_ids=None)
+    assert implicit == explicit_none
+    assert "selected_request_ids" not in implicit
+    output = tmp_path / "weather"
+    assert save_plan(tmp_path, output) == implicit
+    assert not (output / "selected_request_ids.json").exists()
+
+
+def test_request_selection_is_sorted_and_hash_deterministic_regardless_of_set_order(tmp_path) -> None:
+    _cohort(tmp_path, "zenodo_6352735", dates=("2020-06-01", "2021-06-01"))
+    full = build_plan(tmp_path)
+    ids = [r["request_id"] for r in full["requests"]]
+    forward = build_plan(tmp_path, request_ids=set(ids))
+    reverse = build_plan(tmp_path, request_ids=set(reversed(ids)))
+    assert forward == reverse
+    assert forward["selected_request_ids"] == sorted(ids)
+    assert forward["requests"] == full["requests"]
+    assert forward["plan_sha256"] != full["plan_sha256"]
+
+
+def test_unknown_request_id_fails_before_creating_a_plan_directory(tmp_path) -> None:
+    collection, output = tmp_path / "collection", tmp_path / "weather"
+    _cohort(collection, "zenodo_6352735")
+    with pytest.raises(ValueError, match="Unknown weather request IDs"):
+        save_plan(collection, output, request_ids={"unknown_request"})
+    assert not output.exists()
+
+
+def test_empty_selection_is_explicit_and_never_becomes_the_full_plan(tmp_path) -> None:
+    _cohort(tmp_path, "zenodo_6352735")
+    selected = build_plan(tmp_path, request_ids=set())
+    assert selected["selected_request_ids"] == []
+    assert selected["requests"] == []
+    assert selected["site_request_mapping"] == []
+
+
+def test_selected_fetch_resumes_same_ids_and_rejects_changed_scope_without_mutation(tmp_path) -> None:
+    collection, output = tmp_path / "collection", tmp_path / "weather"
+    _cohort(collection, "zenodo_6352735", dates=("2019-06-01", "2020-06-01", "2021-06-01"))
+    requests = build_plan(collection)["requests"]
+    selection = {r["request_id"] for r in requests[1:]}
+    client = Client(requests)
+    first = fetch(collection, output, request_ids=selection, max_requests=1, client=client)
+    assert first["status"] == "partial"
+    assert first["total_requests"] == 2
+    before = {name: (output/name).read_bytes() for name in ["weather_plan.json", "weather_manifest.json"]}
+    with pytest.raises(ValueError, match="changed; choose a new output directory"):
+        fetch(collection, output, client=client)
+    with pytest.raises(ValueError, match="changed; choose a new output directory"):
+        fetch(collection, output, request_ids={requests[0]["request_id"]}, client=client)
+    assert all((output/name).read_bytes() == body for name, body in before.items())
+    assert len(client.calls) == 1
+    second = fetch(collection, output, request_ids=set(reversed(sorted(selection))), client=client)
+    assert second["status"] == "complete"
+    assert second["total_requests"] == 2
+    assert set(client.calls) == {r["url"] for r in requests[1:]}
+    assert check(output)["status"] == "passed"
+    assert json.loads((output / "selected_request_ids.json").read_text()) == sorted(selection)
+    report = (output / "README_ru.md").read_text()
+    assert report.count(f"--request-ids-file {output.resolve() / 'selected_request_ids.json'}") == 2
+    fetch(collection, output, request_ids=selection, client=client)
+    assert len(client.calls) == 2
+
+
+def test_plan_cli_loads_json_array_without_hashing_its_path_or_order(tmp_path) -> None:
+    collection, output = tmp_path / "collection", tmp_path / "weather"
+    _cohort(collection, "zenodo_6352735", dates=("2020-06-01", "2021-06-01"))
+    full = build_plan(collection)
+    ids = [r["request_id"] for r in reversed(full["requests"])]
+    selection_file = tmp_path / "selection.json"
+    write_json(selection_file, ids)
+    args = ["plan", "--collection-dir", str(collection), "--output-dir", str(output), "--request-ids-file", str(selection_file)]
+    assert main(args) == 0
+    saved_bytes = (output / "weather_plan.json").read_bytes()
+    saved = json.loads(saved_bytes)
+    assert saved["selected_request_ids"] == sorted(ids)
+    assert str(selection_file) not in saved["input_hashes"]
+    write_json(selection_file, list(reversed(ids)))
+    assert main(args) == 0
+    assert (output / "weather_plan.json").read_bytes() == saved_bytes
+
+
+@pytest.mark.parametrize("value", [{"request_ids": []}, [123], [""], None])
+def test_selection_file_cli_requires_an_array_of_nonempty_strings(tmp_path, value) -> None:
+    path = tmp_path / "selection.json"
+    write_json(path, value)
+    with pytest.raises(SystemExit) as error:
+        main(["plan", "--collection-dir", str(tmp_path / "collection"), "--output-dir", str(tmp_path / "weather"), "--request-ids-file", str(path)])
+    assert error.value.code == 2
+
+
+def test_fetch_cli_forwards_selection_to_the_api(monkeypatch, tmp_path) -> None:
+    path = tmp_path / "selection.json"
+    write_json(path, ["chosen_request"])
+    captured = {}
+
+    def fake_fetch(collection_dir, output_dir, **kwargs):
+        captured.update(kwargs)
+        return {"status": "complete"}
+
+    monkeypatch.setattr("agro_phenology.external_validation_weather.fetch", fake_fetch)
+    assert main(["fetch", "--collection-dir", str(tmp_path / "collection"), "--output-dir", str(tmp_path / "weather"), "--request-ids-file", str(path)]) == 0
+    assert captured["request_ids"] == {"chosen_request"}
+
+
+def test_saved_selection_copy_cannot_be_changed_when_resuming(tmp_path) -> None:
+    collection, output = tmp_path / "collection", tmp_path / "weather"
+    _cohort(collection, "zenodo_6352735", dates=("2020-06-01", "2021-06-01"))
+    request_id = build_plan(collection)["requests"][0]["request_id"]
+    save_plan(collection, output, request_ids={request_id})
+    write_json(output / "selected_request_ids.json", ["changed_id"])
+    before = (output / "weather_plan.json").read_bytes()
+    with pytest.raises(ValueError, match="Saved request ID selection changed"):
+        save_plan(collection, output, request_ids={request_id})
+    assert (output / "weather_plan.json").read_bytes() == before

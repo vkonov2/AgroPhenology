@@ -48,7 +48,8 @@ def _grid(value: float) -> float:
     return math.floor(float(value) * 4 + .5) / 4
 
 
-def build_plan(collection_dir: Path, *, include_secondary: bool = False) -> dict:
+def build_plan(collection_dir: Path, *, include_secondary: bool = False,
+               request_ids: set[str] | None = None) -> dict:
     """Read dated normalized observations and public locations; do no I/O network."""
     collection_dir = Path(collection_dir).resolve()
     allowed = PRIMARY_SOURCES + (SECONDARY_SOURCES if include_secondary else ())
@@ -133,6 +134,14 @@ def build_plan(collection_dir: Path, *, include_secondary: bool = False) -> dict
                 "request_id": item["request_id"],
             })
     ordered = sorted(requests.values(), key=lambda x: (x["priority"], x["year"], x["requested_grid_latitude"], x["requested_grid_longitude"]))
+    if request_ids is not None:
+        if not isinstance(request_ids, (set, frozenset)) or any(not isinstance(rid, str) or not rid for rid in request_ids):
+            raise ValueError("request_ids must be a set of nonempty request ID strings or None")
+        unknown = request_ids - {item["request_id"] for item in ordered}
+        if unknown:
+            raise ValueError(f"Unknown weather request IDs: {sorted(unknown)}")
+        ordered = [item for item in ordered if item["request_id"] in request_ids]
+        mappings = [item for item in mappings if item["request_id"] in request_ids]
     body = {
         "format_version": FORMAT_VERSION, "collection_dir": str(collection_dir),
         "as_of_date": AS_OF_DATE.isoformat(), "safe_era5_availability_end": AVAILABLE_END.isoformat(),
@@ -144,13 +153,16 @@ def build_plan(collection_dir: Path, *, include_secondary: bool = False) -> dict
         "purpose": "retrospective_weather_reconstruction_not_historical_operational_availability",
         "previous_year_december": "not_added_unless_that_year_has_source_observations",
     }
+    if request_ids is not None:
+        body["selected_request_ids"] = sorted(request_ids)
     body["plan_sha256"] = _stable_hash(body)
     return body
 
 
-def plan(collection_dir: Path, output_dir: Path, *, include_secondary: bool = False) -> dict:
+def plan(collection_dir: Path, output_dir: Path, *, include_secondary: bool = False,
+         request_ids: set[str] | None = None) -> dict:
     """Save one stable plan, refusing to replace an unrelated/existing version."""
-    result = build_plan(collection_dir, include_secondary=include_secondary)
+    result = build_plan(collection_dir, include_secondary=include_secondary, request_ids=request_ids)
     output_dir = Path(output_dir).resolve()
     output_dir.mkdir(parents=True, exist_ok=True)
     plan_path = output_dir / "weather_plan.json"
@@ -158,10 +170,16 @@ def plan(collection_dir: Path, output_dir: Path, *, include_secondary: bool = Fa
         saved = json.loads(plan_path.read_text())
         if saved["plan_sha256"] != result["plan_sha256"]:
             raise ValueError("Weather plan or inputs changed; choose a new output directory")
+        if "selected_request_ids" in saved:
+            selection_path = output_dir / "selected_request_ids.json"
+            if not selection_path.is_file() or json.loads(selection_path.read_text()) != saved["selected_request_ids"]:
+                raise ValueError("Saved request ID selection changed; choose a new output directory")
         return saved
     if any(output_dir.iterdir()):
         raise ValueError("Output directory contains unrelated files; refusing to overwrite")
     write_json(plan_path, result)
+    if "selected_request_ids" in result:
+        write_json(output_dir / "selected_request_ids.json", result["selected_request_ids"])
     pd.DataFrame(result["site_request_mapping"]).to_parquet(output_dir / "site_request_mapping.parquet", index=False)
     write_json(output_dir / "weather_manifest.json", {
         "format_version": FORMAT_VERSION, "status": "planned", "plan_sha256": result["plan_sha256"],
@@ -214,12 +232,12 @@ def _current_inputs_match(inputs: dict[str, str]) -> list[str]:
 
 def fetch(collection_dir: Path, output_dir: Path, *, max_requests: int = 250,
           include_secondary: bool = False, pause_seconds: float = 3.0, client: Any = None,
-          retry_failed: bool = False) -> dict:
+          retry_failed: bool = False, request_ids: set[str] | None = None) -> dict:
     """Fetch at most max_requests pending annual cell requests in this invocation."""
     if max_requests < 0:
         raise ValueError("max_requests must be nonnegative")
     output_dir = Path(output_dir).resolve()
-    request_plan = plan(collection_dir, output_dir, include_secondary=include_secondary)
+    request_plan = plan(collection_dir, output_dir, include_secondary=include_secondary, request_ids=request_ids)
     if not request_plan["requests"]:
         raise ValueError("No dated georeferenced allowed cohorts available")
     lock_path = output_dir / ".weather.lock"
@@ -317,6 +335,9 @@ def _provider_stop_reason(error: Exception) -> str | None:
 
 
 def _write_report(output_dir: Path, request_plan: dict, manifest: dict) -> None:
+    scope_options = " --include-secondary" if request_plan["include_secondary"] else ""
+    if "selected_request_ids" in request_plan:
+        scope_options += f" --request-ids-file {output_dir / 'selected_request_ids.json'}"
     lines = [
         "# ERA5 для внешних полевых наборов", "",
         "Погода предназначена для ретроспективной проверки опубликованных формул. Это не архив прогнозов и не доказательство доступности ERA5 на историческую дату выпуска предупреждения.", "",
@@ -326,8 +347,8 @@ def _write_report(output_dir: Path, request_plan: dict, manifest: dict) -> None:
         "В site_request_mapping.parquet сохранены исходные публичные координаты участков и связь с запросом. Запросы объединяются по регулярной сетке 0,25° и году; фактические координаты, вернувшиеся у провайдера, сохранены в request_metadata и почасовых файлах. Округление исходных координат и реанализ ограничивают точность погоды у растений.", "",
         "raw содержит неизменяемые ответы с receipt и SHA-256; normalized — только полученные часы и значения, без заполнения пропусков. Единицы измерения и число доступных значений по переменной сохранены в request_metadata. Время получения известно; время первоначальной публикации и инициализации исторических оценок не восстанавливается.", "",
         "Основная коллекция исходов не изменялась. Погодные ответы не являются новыми наблюдениями болезни. Никакие модели не обучались, будущие состоявшиеся значения не выдаются за прогноз.", "",
-        "```bash", f"PYTHONPATH=src .venv/bin/python -m agro_phenology.external_validation_weather plan --collection-dir {request_plan['collection_dir']} --output-dir {output_dir}",
-        f"PYTHONPATH=src .venv/bin/python -m agro_phenology.external_validation_weather fetch --collection-dir {request_plan['collection_dir']} --output-dir {output_dir} --max-requests 250",
+        "```bash", f"PYTHONPATH=src .venv/bin/python -m agro_phenology.external_validation_weather plan --collection-dir {request_plan['collection_dir']} --output-dir {output_dir}{scope_options}",
+        f"PYTHONPATH=src .venv/bin/python -m agro_phenology.external_validation_weather fetch --collection-dir {request_plan['collection_dir']} --output-dir {output_dir} --max-requests 250{scope_options}",
         f"PYTHONPATH=src .venv/bin/python -m agro_phenology.external_validation_weather check --output-dir {output_dir}", "```", "",
         "Повторный fetch продолжает ещё не обработанные запросы, максимум 250 за один вызов. Для явного повторения ошибочных запросов добавьте --retry-failed; история попыток сохраняется. Уже полученные raw-ответы не перезаписываются: повторный разбор читает тот же сохранённый ответ. HTTP429 или общий отказ доступа останавливает текущую пачку, оставляя остальные запросы pending. Ограничение числа запросов относится к ячейкам-годам, возможны HTTP-повторы. Для новых версий данных или кода требуется новый output-dir.",
     ]
@@ -360,17 +381,28 @@ def main(argv: list[str] | None = None) -> int:
         cmd.add_argument("--output-dir", type=Path, required=True)
         if command in {"plan", "fetch"}:
             cmd.add_argument("--include-secondary", action="store_true")
+            cmd.add_argument("--request-ids-file", type=Path,
+                             help="JSON array of exact request IDs; use the same selection when resuming")
         if command == "fetch":
             cmd.add_argument("--max-requests", type=int, default=250)
             cmd.add_argument("--pause-seconds", type=float, default=3.0)
             cmd.add_argument("--retry-failed", action="store_true")
     args = parser.parse_args(argv)
+    request_ids = None
+    if args.command in {"plan", "fetch"} and args.request_ids_file is not None:
+        try:
+            value = json.loads(args.request_ids_file.read_text(encoding="utf-8"))
+            if not isinstance(value, list) or any(not isinstance(rid, str) or not rid for rid in value):
+                raise ValueError("expected a JSON array of nonempty request ID strings")
+            request_ids = set(value)
+        except (OSError, ValueError) as error:
+            parser.error(f"Invalid --request-ids-file: {error}")
     if args.command == "plan":
-        result = plan(args.collection_dir, args.output_dir, include_secondary=args.include_secondary)
+        result = plan(args.collection_dir, args.output_dir, include_secondary=args.include_secondary, request_ids=request_ids)
         print(json.dumps({"planned_requests": len(result["requests"]), "site_year_mappings": len(result["site_request_mapping"]), "plan_sha256": result["plan_sha256"], "requests_by_source": {s: sum(s in r["source_ids"] for r in result["requests"]) for s in PRIMARY_SOURCES + SECONDARY_SOURCES}}, ensure_ascii=False, indent=2))
         return 0
     if args.command == "fetch":
-        result = fetch(args.collection_dir, args.output_dir, max_requests=args.max_requests, include_secondary=args.include_secondary, pause_seconds=args.pause_seconds, retry_failed=args.retry_failed)
+        result = fetch(args.collection_dir, args.output_dir, max_requests=args.max_requests, include_secondary=args.include_secondary, pause_seconds=args.pause_seconds, retry_failed=args.retry_failed, request_ids=request_ids)
     else:
         result = check(args.output_dir)
     print(json.dumps(result, ensure_ascii=False, indent=2))
